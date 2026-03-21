@@ -1,0 +1,240 @@
+openapi: 3.0.3
+info:
+  title: Text Analysis API
+  description: Algorithmic text/NLP analysis — sentiment, readability, keywords, language detection, statistics, and summarization. No external AI dependencies.
+  version: 1.0.0
+  license:
+    name: MIT
+
+servers:
+  - url: http://localhost:4600
+    description: Local development
+
+paths:
+  /health:
+    get:
+      summary: Health check
+      responses:
+        '200':
+          description: Service status
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ok
+                  service:
+                    type: string
+                  version:
+                    type: string
+
+  /api/v1/sentiment:
+    post:
+      summary: Sentiment analysis
+      description: Analyze text sentiment using rule-based word scoring with negation and intensifier handling.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TextInput'
+      responses:
+        '200':
+          description: Sentiment result
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      score:
+                        type: number
+                      comparative:
+                        type: number
+                      label:
+                        type: string
+                        enum: [positive, negative, neutral]
+                      confidence:
+                        type: number
+                      positive:
+                        type: array
+                        items:
+                          type: string
+                      negative:
+                        type: array
+                        items:
+                          type: string
+                      tokens:
+                        type: integer
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /api/v1/readability:
+    post:
+      summary: Readability scores
+      description: Calculate Flesch-Kincaid Grade Level, Flesch Reading Ease, Coleman-Liau Index, and Automated Readability Index.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TextInput'
+      responses:
+        '200':
+          description: Readability scores
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      fleschKincaidGrade:
+                        type: number
+                      fleschReadingEase:
+                        type: number
+                      colemanLiauIndex:
+                        type: number
+                      automatedReadabilityIndex:
+                        type: number
+                      avgWordsPerSentence:
+                        type: number
+                      avgSyllablesPerWord:
+                        type: number
+                      interpretation:
+                        type: string
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /api/v1/keywords:
+    post:
+      summary: Extract keywords
+      description: TF-based keyword extraction with stop word removal.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: '#/components/schemas/TextInput'
+                - type: object
+                  properties:
+                    maxKeywords:
+                      type: integer
+                      default: 10
+                    minLength:
+                      type: integer
+                      default: 3
+      responses:
+        '200':
+          description: Extracted keywords
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /api/v1/language:
+    post:
+      summary: Detect language
+      description: Character frequency analysis for EN, KO, JA, ZH, ES, FR, DE.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TextInput'
+      responses:
+        '200':
+          description: Language detection result
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      language:
+                        type: string
+                      languageName:
+                        type: string
+                      confidence:
+                        type: number
+                      scores:
+                        type: object
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /api/v1/stats:
+    post:
+      summary: Text statistics
+      description: Word count, sentence count, paragraph count, average lengths, reading/speaking time.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TextInput'
+      responses:
+        '200':
+          description: Text statistics
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /api/v1/analyze:
+    post:
+      summary: Full analysis
+      description: Run all analyses at once — sentiment, readability, keywords, language, stats, profanity, summary.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: '#/components/schemas/TextInput'
+                - type: object
+                  properties:
+                    maxKeywords:
+                      type: integer
+                      default: 10
+                    sentences:
+                      type: integer
+                      default: 3
+      responses:
+        '200':
+          description: Complete analysis
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+components:
+  schemas:
+    TextInput:
+      type: object
+      required:
+        - text
+      properties:
+        text:
+          type: string
+          description: The text to analyze
+          example: "The quick brown fox jumps over the lazy dog."
+
+  responses:
+    BadRequest:
+      description: Missing or empty text
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+                example: 'Missing or empty "text" field in request body'
